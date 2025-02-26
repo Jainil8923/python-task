@@ -1,18 +1,27 @@
+import importlib
 from typing import List, Dict
 import random
-import requests
+import subprocess
+import sys
 
 from array_to_dict import atd
 from group_user_by_age import group_user_by_age
 from user import Users
 from bank import SavingAccount, DepositAccount
 
+def install_and_import(package: str):
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+    except ImportError:
+        import pip
+        pip.main(['install', package])
+    finally:
+        globals()[package] = importlib.import_module(package)
+        print(f"{package} imported successfully.")
+
 def q1():
-    user_version = input("Enter version for requests: ")
-    if requests.__version__ == user_version:
-        print("version matched.")
-    else:
-        print(f"both version are different, current installed version is: {requests.__version__}")
+    install_and_import('requests')
+    print(requests.__version__)
 
 def q2():
     arr: List[str] = ["one", "two", "three", "four"]
@@ -99,9 +108,9 @@ def q6():
     print(deposit_obj.withdrawal(1000000))
 
 if __name__ == "__main__":
-    # q1()
+    q1()
     # q2()
     # q3()
     # q4()
     # q5()
-    q6()
+    # q6()
