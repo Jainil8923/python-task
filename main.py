@@ -3,6 +3,7 @@ from typing import List, Dict
 import random
 import subprocess
 import sys
+import requests
 
 from array_to_dict import atd
 from group_user_by_age import group_user_by_age
