@@ -5,6 +5,7 @@ from db import Base
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 
+
 class Project(Base):
     __tablename__ = "projects"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -17,6 +18,7 @@ class Project(Base):
     time_updated = Column(DateTime(timezone=False), onupdate=func.now())
     resources = relationship("ProjectResource", back_populates="project")
 
+
 class Resource(Base):
     __tablename__ = "resources"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -28,6 +30,7 @@ class Resource(Base):
     time_updated = Column(DateTime(timezone=False), onupdate=func.now())
     time_leaved = Column(DateTime(timezone=False))
     projects = relationship("ProjectResource", back_populates="resource")
+
 
 class ProjectResource(Base):
     __tablename__ = "project_resources"

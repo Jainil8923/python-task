@@ -3,13 +3,15 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from db import get_db, engine
 from models import Base, Project, Resource, ProjectResource
-from schema import ProjectCreate, ProjectResponse, ResourceCreate, ResourceResponse, ProjectResourceSchema, ProjectResourceSchemaResponse
+from schema import ProjectCreate, ProjectResponse, ResourceCreate, ResourceResponse, ProjectResourceSchema, \
+    ProjectResourceSchemaResponse
 from typing import List
 import uuid
 
 app = FastAPI()
 
 Base.metadata.create_all(bind=engine)
+
 
 @app.post("/projects/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 def create_project(project: ProjectCreate, db: Session = Depends(get_db)):
@@ -22,9 +24,11 @@ def create_project(project: ProjectCreate, db: Session = Depends(get_db)):
     db.refresh(db_project)
     return db_project
 
+
 @app.get("/projects/", response_model=List[ProjectResponse], status_code=status.HTTP_200_OK)
 def get_projects(db: Session = Depends(get_db)):
     return db.query(Project).filter(Project.is_deleted == False).all()
+
 
 @app.put("/projects/{project_id}/complete", status_code=status.HTTP_200_OK)
 def complete_project(project_id: uuid.UUID, db: Session = Depends(get_db)):
@@ -40,6 +44,7 @@ def complete_project(project_id: uuid.UUID, db: Session = Depends(get_db)):
         pr.offboard_date = func.now()
     db.commit()
     return {"message": "Project marked as completed, resources moved off bench."}
+
 
 @app.post("/resources/", response_model=ResourceResponse, status_code=status.HTTP_201_CREATED)
 def create_resource(resource: ResourceCreate, db: Session = Depends(get_db)):
@@ -103,8 +108,9 @@ def get_resources_by_project(project_id: uuid.UUID, db: Session = Depends(get_db
     return db.query(Resource, ProjectResource).filter(ProjectResource.project_id == project_id).filter(
         ProjectResource.resource_id == Resource.id)
 
-@app.post("/asign",response_model=ProjectResourceSchemaResponse, status_code=status.HTTP_200_OK)
-def asign_resource(pr:ProjectResourceSchema, db: Session = Depends(get_db)):
+
+@app.post("/assign", response_model=ProjectResourceSchemaResponse, status_code=status.HTTP_200_OK)
+def assign_resource(pr: ProjectResourceSchema, db: Session = Depends(get_db)):
     resource_allocate = ProjectResource(resource_id=pr.resource_id, project_id=pr.project_id)
     db.add(resource_allocate)
     db.commit()
