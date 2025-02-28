@@ -1,5 +1,3 @@
-from uuid import uuid4
-
 from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, Date
 from sqlalchemy.orm import relationship
 from db import Base

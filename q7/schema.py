@@ -34,3 +34,7 @@ class ProjectResponse(ProjectBase):
 
     class Config:
         from_attributes = True
+
+class ProjectResource(BaseModel):
+    project_id: uuid.UUID
+    resource_id: uuid.UUID
