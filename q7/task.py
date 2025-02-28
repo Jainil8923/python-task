@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from db import get_db, engine
 from models import Base, Project, Resource, ProjectResource
-from schema import ProjectCreate, ProjectResponse, ResourceCreate, ResourceResponse, ProjectResource
+from schema import ProjectCreate, ProjectResponse, ResourceCreate, ResourceResponse, ProjectResourceSchema, ProjectResourceSchemaResponse
 from typing import List
 import uuid
 
@@ -10,9 +11,11 @@ app = FastAPI()
 
 Base.metadata.create_all(bind=engine)
 
-
 @app.post("/projects/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 def create_project(project: ProjectCreate, db: Session = Depends(get_db)):
+    res = db.query(Resource).filter(Resource.id == project.manager_id).all()
+    if res[0].role != "manager":
+        raise HTTPException(status_code=404, detail="Provided wrong manager_id.")
     db_project = Project(name=project.name, manager_id=project.manager_id, deadline=project.deadline)
     db.add(db_project)
     db.commit()
@@ -23,19 +26,20 @@ def create_project(project: ProjectCreate, db: Session = Depends(get_db)):
 def get_projects(db: Session = Depends(get_db)):
     return db.query(Project).filter(Project.is_deleted == False).all()
 
-
 @app.put("/projects/{project_id}/complete", status_code=status.HTTP_200_OK)
-def complete_project(project_id: int, db: Session = Depends(get_db)):
+def complete_project(project_id: uuid.UUID, db: Session = Depends(get_db)):
     project = db.query(Project).filter(Project.id == project_id, Project.is_deleted == False).first()
+    resources = db.query(ProjectResource).filter(ProjectResource.project_id == project_id).all()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     project.completed = True
     db.commit()
-    for pr in project.resources:
-        pr.resource.on_bench = True
+    for pr in resources:
+        resource = db.query(Resource).filter(Resource.id == pr.resource_id).first()
+        resource.on_bench = False
+        pr.offboard_date = func.now()
     db.commit()
-    return {"message": "Project marked as completed, resources moved to bench."}
-
+    return {"message": "Project marked as completed, resources moved off bench."}
 
 @app.post("/resources/", response_model=ResourceResponse, status_code=status.HTTP_201_CREATED)
 def create_resource(resource: ResourceCreate, db: Session = Depends(get_db)):
@@ -99,10 +103,12 @@ def get_resources_by_project(project_id: uuid.UUID, db: Session = Depends(get_db
     return db.query(Resource, ProjectResource).filter(ProjectResource.project_id == project_id).filter(
         ProjectResource.resource_id == Resource.id)
 
-@app.post("/asignresource/{resource_id}/project/{project_id}",response_model=ProjectResponse, status_code=status.HTTP_200_OK)
-def asign_resource(resource_id: uuid.UUID,project_id: uuid.UUID, db: Session = Depends(get_db)):
-    resource_allocate = ProjectResource(resource_id=resource_id, project_id=project_id)
+@app.post("/asign",response_model=ProjectResourceSchemaResponse, status_code=status.HTTP_200_OK)
+def asign_resource(pr:ProjectResourceSchema, db: Session = Depends(get_db)):
+    resource_allocate = ProjectResource(resource_id=pr.resource_id, project_id=pr.project_id)
     db.add(resource_allocate)
     db.commit()
-    db.refresh(resource_allocate)
+    resource = db.query(Resource).filter(Resource.id == pr.resource_id).first()
+    resource.on_bench = True
+    db.commit()
     return resource_allocate
